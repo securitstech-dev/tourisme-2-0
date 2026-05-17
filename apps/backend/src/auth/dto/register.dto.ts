@@ -34,6 +34,10 @@ export class RegisterDto {
   @IsString()
   plan?: string;
 
+  @IsOptional()
+  @IsString()
+  confirmPass?: string;
+
   // --- Champs optionnels spécifiques aux opérateurs ---
 
   @IsOptional()
