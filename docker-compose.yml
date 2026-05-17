@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: congo-tourisme-db
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-congo_tourisme}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - congo-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: congo-tourisme-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - congo-network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: congo-tourisme-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@securitstech.cg}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - congo-network
+
+networks:
+  congo-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

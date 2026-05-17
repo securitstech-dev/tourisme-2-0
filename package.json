@@ -1,0 +1,29 @@
+{
+  "name": "congo-tourisme",
+  "private": true,
+  "packageManager": "npm@11.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "vercel-build": "cd apps/frontend && npm run build"
+  },
+  "devDependencies": {
+    "prisma": "^6.2.1",
+    "turbo": "latest",
+    "vercel": "^54.1.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.2.1"
+  },
+  "overrides": {
+    "next": "15.5.18",
+    "react": "19.2.5",
+    "react-dom": "19.2.5"
+  }
+}

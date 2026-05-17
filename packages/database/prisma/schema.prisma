@@ -1,0 +1,318 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Utilisateurs (tous rôles confondus)
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String?
+  firstName     String
+  lastName      String
+  phone         String?
+  role          UserRole  @default(TOURIST)
+  avatarUrl     String?
+  isVerified    Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime? // soft delete
+  operator      Operator?
+  reservations  Reservation[]
+  reviews       Review[]
+  refreshTokens RefreshToken[]
+}
+
+enum UserRole {
+  ADMIN
+  OPERATOR
+  TOURIST
+}
+
+// Profil étendu pour les opérateurs
+model Operator {
+  id                String           @id @default(cuid())
+  userId            String           @unique
+  user              User             @relation(fields: [userId], references: [id])
+  businessName      String
+  businessType      BusinessType
+  description       String           @db.Text
+  logoUrl           String?
+  coverImageUrl     String?
+  region            String           // Brazzaville, Pointe-Noire, Dolisie, Nord Congo...
+  city              String
+  address           String
+  latitude          Float?
+  longitude         Float?
+  phone             String
+  whatsapp          String?
+  website           String?
+  rccmNumber        String?          // Registre du Commerce
+  taxId             String?          // NIU (Identification Unique)
+  managerName       String?
+  legalAddress      String?
+  isValidated       Boolean          @default(false) // Admin doit valider après étude du dossier
+  validatedAt       DateTime?
+  
+  // Gestion de la conformité et essai
+  documents         OperatorDocument[]
+  trialEndsAt       DateTime?        // Date de fin des 14 jours d'essai
+  isTrialUsed       Boolean          @default(false)
+  
+  // isSustainable     Boolean          @default(false) // Badge Tourisme Durable - TODO: migration required
+  // hasSecurityQuitus Boolean          @default(false) // Quitus Sapeurs Pompiers - TODO: migration required
+  
+  subscriptionPlan  SubscriptionPlan @default(STARTER)
+  subscriptionEnd   DateTime?
+  listings          Listing[]
+  reservations      Reservation[]
+  subscriptions     Subscription[]   // Historique des abonnements
+  createdAt         DateTime         @default(now())
+
+  updatedAt         DateTime         @updatedAt
+}
+
+model OperatorDocument {
+  id              String         @id @default(cuid())
+  operatorId      String
+  operator        Operator       @relation(fields: [operatorId], references: [id])
+  type            DocumentType
+  url             String         // Lien Cloudinary
+  cloudinaryId    String
+  status          DocumentStatus @default(PENDING)
+  rejectionReason String?        // Motif si le document est rejeté
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+enum DocumentType {
+  RCCM
+  COMMERCIAL_AUTH
+  NIU
+  PATENTE
+  SCIET
+  SCIEN
+  SAFETY_QUITUS      // Sapeurs pompiers
+  MANAGER_ID         // CNI
+  NATIONALITY_CERT   // Certificat de nationalité
+  TAX_PAYMENT        // Paiement impôts
+  MUNICIPAL_AUTH     // Autorisation Mairie
+  MINISTRY_AUTH      // Autorisation Ministère de tutelle
+  OTHER
+}
+
+enum DocumentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum BusinessType {
+  HOTEL
+  RESTAURANT
+  CASINO
+  EVENT_HALL
+  TOURIST_SITE
+  TRAVEL_AGENCY
+  BAR_NIGHTCLUB
+  GAME_ROOM
+  JET_SKI_ACTIVITY
+  CAVE_VIP
+  SPA_WELLNESS
+  LODGE_CAMP
+  OTHER
+}
+
+enum SubscriptionPlan {
+  STARTER
+  PROFESSIONAL
+  PREMIUM
+}
+
+// Offres publiées par les opérateurs
+model Listing {
+  id            String         @id @default(cuid())
+  operatorId    String
+  operator      Operator       @relation(fields: [operatorId], references: [id])
+  title         String
+  description   String         @db.Text
+  listingType   ListingType
+  pricePerNight Float?         // Pour les hôtels
+  pricePerPerson Float?        // Pour les excursions / restaurants
+  priceFlatRate Float?         // Pour les salles de fête / casinos
+  currency      String         @default("XAF") // Franc CFA
+  capacity      Int?
+  isAvailable   Boolean        @default(true)
+  isFeatured    Boolean        @default(false) // Mis en avant par Admin
+  images        ListingImage[]
+  amenities     String[]       // ["wifi", "piscine", "climatisation"...]
+  checkInTime   String?        // "14:00"
+  checkOutTime  String?        // "11:00"
+  minNights     Int?           @default(1)
+  rating        Float?         @default(0)
+  reviewCount   Int            @default(0)
+  reservations  Reservation[]
+  reviews       Review[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime?
+}
+
+enum ListingType {
+  HOTEL_ROOM
+  HOTEL_SUITE
+  RESTAURANT_TABLE
+  EXCURSION
+  EVENT_HALL_RENTAL
+  CASINO_PACKAGE
+  SPA_SERVICE
+  TOURIST_SITE_VISIT
+  NIGHTCLUB_ENTRY
+  BAR_TABLE
+  VIP_LOUNGE
+  BOARD_GAME
+  BILLARD
+  JETSKI
+  LEISURE_ACTIVITY
+  KERMESSE
+  SPECIAL_OFFER
+}
+
+
+model ListingImage {
+  id           String   @id @default(cuid())
+  listingId    String
+  listing      Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  url          String
+  cloudinaryId String
+  altText      String?
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+}
+
+// Réservations
+model Reservation {
+  id               String            @id @default(cuid())
+  listingId        String
+  listing          Listing           @relation(fields: [listingId], references: [id])
+  touristId        String
+  tourist          User              @relation(fields: [touristId], references: [id])
+  operatorId       String
+  operator         Operator          @relation(fields: [operatorId], references: [id])
+  checkIn          DateTime
+  checkOut         DateTime?
+  guests           Int               @default(1)
+  totalPrice       Float
+  currency         String            @default("XAF")
+  status           ReservationStatus @default(PENDING)
+  paymentStatus    PaymentStatus     @default(UNPAID)
+  stripePaymentId  String?
+  notes            String?           @db.Text
+  cancellationReason String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  payment          Payment?
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  REJECTED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PENDING
+  PAID
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+// Paiements
+model Payment {
+  id              String        @id @default(cuid())
+  reservationId   String        @unique
+  reservation     Reservation   @relation(fields: [reservationId], references: [id])
+  amount          Float
+  currency        String
+  method          PaymentMethod
+  stripePaymentId String?
+  mobileMoneyRef  String?
+  status          PaymentStatus
+  paidAt          DateTime?
+  createdAt       DateTime      @default(now())
+}
+
+enum PaymentMethod {
+  STRIPE
+  MOBILE_MONEY_MTN
+  MOBILE_MONEY_AIRTEL
+}
+
+// Avis et notations
+model Review {
+  id                String       @id @default(cuid())
+  listingId         String
+  listing           Listing      @relation(fields: [listingId], references: [id])
+  authorId          String
+  author            User         @relation(fields: [authorId], references: [id])
+  rating            Int          // 1 à 5
+  comment           String       @db.Text
+  status            ReviewStatus @default(PENDING)
+  moderationComment String?      @db.Text // Commentaire auto de Kongo si besoin
+  isVisible         Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Abonnements opérateurs
+model Subscription {
+  id            String           @id @default(cuid())
+  operatorId    String
+  operator      Operator         @relation(fields: [operatorId], references: [id])
+  plan          SubscriptionPlan
+  amount        Float
+  currency      String           @default("XAF")
+  paymentStatus PaymentStatus    @default(UNPAID) // Statut du paiement de l'abonnement
+  startDate     DateTime
+  endDate       DateTime
+  isActive      Boolean          @default(true)
+  stripeSubId   String?
+  mobileMoneyRef String?
+  createdAt     DateTime         @default(now())
+}
+
+// Tokens de refresh JWT
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+// Connaissances pour le Chatbot
+model ChatbotKnowledge {
+  id        String   @id @default(cuid())
+  topic     String   // Titre ou sujet (ex: "Géographie du Congo", "Frais d'abonnement")
+  content   String   @db.Text
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// --- MODULES INNOVATION CONGO (Phase 6) ---
+// TODO: Ces modèles seront ajoutés via une migration Prisma dédiée
+// Une fois le backend stable, lancer: prisma migrate dev --name add_innovation_modules
