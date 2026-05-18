@@ -45,10 +45,15 @@ export default function OperatorLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     setMounted(true);
 
+    if (mounted && !isAuthenticated) {
+      router.push('/auth/login');
+      return;
+    }
+
     if (isAuthenticated && user?.role === 'OPERATOR' && user.operator && !user.operator.isValidated && !isOnboarding) {
       router.push('/dashboard/operator/onboarding');
     }
-  }, [isAuthenticated, isOnboarding, router, user]);
+  }, [isAuthenticated, isOnboarding, router, user, mounted]);
 
   if (!mounted) {
     return (
