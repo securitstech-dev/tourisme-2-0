@@ -95,9 +95,7 @@ export default function EditListingPage() {
     formData.append('file', file);
 
     try {
-      const response = await api.post('/uploads/image', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const response = await api.post('/uploads/image', formData);
       const newImages = [...uploadedImages, response.data];
       setUploadedImages(newImages);
       setValue('images', newImages);

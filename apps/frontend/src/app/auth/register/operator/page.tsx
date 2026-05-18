@@ -163,8 +163,9 @@ export default function OperatorRegisterPage() {
     setIsLoading(true);
     setApiError(null);
     try {
+      const { confirmPass, ...restData } = formData;
       const payload = {
-        ...formData,
+        ...restData,
         role: 'OPERATOR',
         businessType: selectedType || formData.businessType,
       };

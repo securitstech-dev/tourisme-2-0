@@ -236,9 +236,7 @@ export default function OperatorOnboarding() {
     setUploadingDocs((current) => ({ ...current, [document.id]: true }));
 
     try {
-      await api.post('/operators/documents/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      await api.post('/operators/documents/upload', formData);
 
       setUploadedDocs((current) => ({
         ...current,
